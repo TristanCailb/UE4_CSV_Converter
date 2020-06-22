@@ -1,12 +1,40 @@
-from os import listdir, path
-from os.path import isfile, join, splitext
+from os import listdir, path, mkdir
+from os.path import isfile, join, splitext, isdir
 
 # Get UE4 string tables path to convert : Current script path + /Tables
 inputPath = path.dirname(path.abspath(__file__)) + "/Input/"
+if not isdir(inputPath):
+    mkdir(inputPath)
 outputPath = path.dirname(path.abspath(__file__)) + "/Output/"
+if not isdir(outputPath):
+    mkdir(outputPath)
 # Get all CSV files in the directory
 csvFiles = [f for f in listdir(inputPath) if isfile(join(inputPath, f)) and splitext(f)[1] == ".csv"]
 newFileSuffix = "_Processed.csv"
+
+def insertDoubleQuote(string, index):
+    """ Insert a double quote in the specified string at the specified index and return the string."""
+    return string[:index] + '\"' + string[index:]
+
+def reformatLine(line):
+    """ Check if the line has '"' character and add it if not. """
+    splitedLine = line.split(';', 1)
+
+    try:
+        if splitedLine[0][0] != '\"':
+            splitedLine[0] = insertDoubleQuote(splitedLine[0], 0)
+            splitedLine[0] = insertDoubleQuote(splitedLine[0], len(splitedLine[0]))
+    except:
+        return ""
+    
+    try:
+        if splitedLine[1][0] != '\"':
+            splitedLine[1] = insertDoubleQuote(splitedLine[1], 0)
+            splitedLine[1] = insertDoubleQuote(splitedLine[1], len(splitedLine[1]))
+    except:
+        return ""
+    
+    return splitedLine[0] + "," + splitedLine[1]
 
 def convertUeToExcel():
     """ Convert CSV exported file from UE4 String Tables to a CSV file readable by Excel """
@@ -59,6 +87,7 @@ def convertExcelToUe():
             newF = open(join(outputPath, fName + newFileSuffix), "w", encoding="utf-16le")
 
             for l in lines:
+                l = reformatLine(l)
                 newLine = l.replace(';', ',', 1) + '\n'
                 newF.write(newLine)
 
